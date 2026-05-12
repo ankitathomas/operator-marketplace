@@ -219,8 +219,23 @@ func main() {
 			}
 		}
 
+		// The RELEASE_VERSION env variable is set to current OpenShift version
+		// by the Cluster Version Operator. If missing or set to the default of
+		// "0.0.1-snapshot", the cluster does not have CVO running, and the image
+		// tag override will be skipped.
+		operatorReleaseVersion := os.Getenv("RELEASE_VERSION")
+		overrideTag, err := defaults.GetCatalogSourceImageTagOverride(operatorReleaseVersion)
+		if err != nil {
+			overrideTag = ""
+			logger.Warnf("failed to parse RELEASE_VERSION %q for image tag override: %v (skipping override)", operatorReleaseVersion, err)
+		}
+
+		if len(overrideTag) > 0 {
+			logger.Infof("applying image tag override %s to default CatalogSources based on RELEASE_VERSION %s", overrideTag, operatorReleaseVersion)
+		}
+
 		// Populate the global default CatalogSource definitions and config
-		if err := defaults.PopulateGlobals(); err != nil {
+		if err := defaults.PopulateGlobals(overrideTag); err != nil {
 			logger.Fatal(err)
 		}
 
